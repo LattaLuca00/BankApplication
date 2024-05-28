@@ -40,7 +40,7 @@ public class BankService {
 
             ResponseEntity<BalanceResponse> response= callApi(url, HttpMethod.GET, entity, BalanceResponse.class);
 
-            if(response.getBody().getStatus().equals("OK")){
+            if(response.getStatusCode().is2xxSuccessful()){
                 return response.getBody();
             }else {
                 ResponseError error = response.getBody().getError()[0];
@@ -67,7 +67,7 @@ public class BankService {
 
             ResponseEntity<TransactionResponse> response = callApi(url, HttpMethod.GET, entity, TransactionResponse.class);
 
-            if (response.getBody().getStatus().equals("OK")) {
+            if (response.getStatusCode().is2xxSuccessful()) {
                 return response.getBody();
             } else {
                 ResponseError error = response.getBody().getError()[0];
@@ -83,7 +83,9 @@ public class BankService {
 
             ResponseEntity<MoneyTransferResponse> response= callApi(url, HttpMethod.POST, entity, MoneyTransferResponse.class);
 
-            if(response.getBody().getStatus().equals("OK")){
+
+
+            if(response.getStatusCode().is2xxSuccessful()){
                 return response.getBody();
             }else {
                 ResponseError error = response.getBody().getError()[0];

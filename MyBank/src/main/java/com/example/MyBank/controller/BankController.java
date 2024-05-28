@@ -36,7 +36,7 @@ public class BankController {
         return ResponseEntity.ok(bankService.getCashAccountTransactions(fromAccountingDate,toAccountingDate));
     }
 
-    @GetMapping("/money-transfer")
+    @PostMapping("/money-transfer")
     public ResponseEntity<MoneyTransferResponse> createMoneyTransfer(@RequestBody MoneyTransferRequest moneyTransferRequest) throws MoneyTransferException {
         return ResponseEntity.ok(bankService.createMoneyTransfer(moneyTransferRequest));
     }
