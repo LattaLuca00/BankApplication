@@ -190,7 +190,7 @@ public class BankControllerTest {
                                 .build())
                         .build())
                 .build();
-        
+
         given(bankService.createMoneyTransfer(ArgumentMatchers.any(MoneyTransferRequest.class))).willThrow(new TransactionException("API000",
                 "it.sella.pagamenti.servizibonifico.exception.ServiziInvioBonificoSubsystemException: " +
                         "it.sella.pagamenti.sottosistemi.SottosistemiException: Errore tecnico CONTO 45685475:Conto 45685475 non esiste"));

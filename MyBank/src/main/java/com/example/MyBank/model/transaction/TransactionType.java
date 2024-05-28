@@ -12,6 +12,4 @@ import lombok.experimental.SuperBuilder;
 public class TransactionType {
     private String enumeration;
     private String value;
-
-
 }

@@ -4,11 +4,14 @@ import com.example.MyBank.configuration.SandboxConfig;
 import com.example.MyBank.exception.AccountBalanceNotFoundException;
 import com.example.MyBank.exception.MoneyTransferException;
 import com.example.MyBank.exception.TransactionException;
+import com.example.MyBank.mappers.TransactionMapper;
 import com.example.MyBank.model.ResponseError;
 import com.example.MyBank.model.balance.BalanceResponse;
 import com.example.MyBank.model.moneyTransfer.request.MoneyTransferRequest;
 import com.example.MyBank.model.moneyTransfer.response.MoneyTransferResponse;
+import com.example.MyBank.model.transaction.Transaction;
 import com.example.MyBank.model.transaction.TransactionResponse;
+import com.example.MyBank.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -30,6 +33,10 @@ public class BankService {
     private SandboxConfig sandboxConfig;
     @Autowired
     private RestTemplate restTemplate;
+    @Autowired
+    private TransactionRepository transactionRepository;
+    @Autowired
+    private TransactionMapper transactionMapper;
 
     public BalanceResponse getCashAccountBalance() throws AccountBalanceNotFoundException {
 
@@ -68,6 +75,9 @@ public class BankService {
             ResponseEntity<TransactionResponse> response = callApi(url, HttpMethod.GET, entity, TransactionResponse.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
+                for(Transaction transaction: response.getBody().getPayload()){
+                transactionRepository.save(transactionMapper.map(transaction));
+                }
                 return response.getBody();
             } else {
                 ResponseError error = response.getBody().getError()[0];
