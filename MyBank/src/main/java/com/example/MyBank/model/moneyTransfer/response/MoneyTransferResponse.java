@@ -1,6 +1,7 @@
 package com.example.MyBank.model.moneyTransfer.response;
 
 import com.example.MyBank.model.ResponseError;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,8 +15,15 @@ import java.util.List;
 @SuperBuilder
 public class MoneyTransferResponse {
     private String status;
+    @JsonAlias({"errors", "error"})
     private ResponseError[] error;
-    private List<MoneyTransfer> payload;
+    private MoneyTransferPayload payload;
 
-
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @SuperBuilder
+    public static class MoneyTransferPayload {
+        private List<MoneyTransfer> list;
+    }
 }

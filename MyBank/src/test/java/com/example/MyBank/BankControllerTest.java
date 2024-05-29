@@ -1,9 +1,6 @@
 package com.example.MyBank;
 
-import com.example.MyBank.configuration.SandboxConfig;
 import com.example.MyBank.controller.BankController;
-import com.example.MyBank.exception.AccountBalanceNotFoundException;
-import com.example.MyBank.exception.TransactionException;
 import com.example.MyBank.model.ResponseError;
 import com.example.MyBank.model.balance.Balance;
 import com.example.MyBank.model.balance.BalanceResponse;
@@ -14,24 +11,22 @@ import com.example.MyBank.model.transaction.TransactionResponse;
 import com.example.MyBank.model.transaction.TransactionType;
 import com.example.MyBank.service.BankService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-import org.mockito.ArgumentMatchers;
-import org.mockito.BDDMockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,128 +36,71 @@ public class BankControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
     @MockBean
     private BankService bankService;
-    @MockBean
-    private SandboxConfig sandboxConfig;
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Test
-    public void testGetCashAccountBalance() throws Exception {
+    private BalanceResponse balanceResponse;
+    private TransactionResponse transactionResponse;
+    private MoneyTransferResponse moneyTransferResponse;
+    private MoneyTransferRequest moneyTransferRequest;
 
-        BalanceResponse balanceResponse = new BalanceResponse();
-        balanceResponse.setStatus("OK");
-        balanceResponse.setPayload(Collections.singletonList(new Balance("2024-05-28", -28.09, -28.09, "EUR")));
+    private String accountId;
 
-        given(bankService.getCashAccountBalance()).willReturn(balanceResponse);
+    @BeforeEach
+    public void setup() throws Exception {
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/bank/balance")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("OK"))
-                .andExpect(jsonPath("$.payload[0].date").value("2024-05-28"))
-                .andExpect(jsonPath("$.payload[0].balance").value(-28.09))
-                .andExpect(jsonPath("$.payload[0].availableBalance").value(-28.09))
-                .andExpect(jsonPath("$.payload[0].currency").value("EUR"));
+        accountId = "14537780";
 
-    }
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Date executionDate = dateFormat.parse("2019-03-31");
+        String balanceDate = dateFormat.format(new Date());
 
-    @Test
-    public void testGetCashAccountBalance_AccountBalanceNotFoundException() throws Exception {
-
-        given(sandboxConfig.getAccountId()).willReturn(99999999L);
-
-        given(bankService.getCashAccountBalance()).willThrow(new AccountBalanceNotFoundException("REQ004", "Invalid account identifier"));
-    }
-
-
-    @Test
-    public void testGetCashAccountTransactions() throws Exception {
-
-        Transaction transaction = new Transaction(
-                "286375735200",
-                "23000004239582",
-                "2023-01-05",
-                "2023-01-05",
-                new TransactionType("GBS_TRANSACTION_TYPE", "GBS_ACCOUNT_TRANSACTION_TYPE_0009"),
-                -0.10,
-                "EUR",
-                "BA TERRIBILE LUCA        REC 94748B390EF241F7ABFADAF8588D9CEE TEST CUTOFF"
-        );
-        TransactionResponse mockResponse = new TransactionResponse();
-        mockResponse.setStatus("OK");
-        mockResponse.setPayload(List.of(transaction));
-
-        given(bankService.getCashAccountTransactions(ArgumentMatchers.any(Date.class), ArgumentMatchers.any(Date.class)))
-                .willReturn(mockResponse);
-
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/bank/transaction")
-                        .param("fromAccountingDate", "2023-01-01")
-                        .param("toAccountingDate", "2023-01-05")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(jsonPath("$.status").value("OK"))
-                .andExpect(jsonPath("$.payload[0].transactionId").value("286375735200"))
-                .andExpect(jsonPath("$.payload[0].operationId").value("23000004239582"))
-                .andExpect(jsonPath("$.payload[0].accountingDate").value("2023-01-05"))
-                .andExpect(jsonPath("$.payload[0].valueDate").value("2023-01-05"))
-                .andExpect(jsonPath("$.payload[0].type.enumeration").value("GBS_TRANSACTION_TYPE"))
-                .andExpect(jsonPath("$.payload[0].type.value").value("GBS_ACCOUNT_TRANSACTION_TYPE_0009"))
-                .andExpect(jsonPath("$.payload[0].amount").value(-0.10))
-                .andExpect(jsonPath("$.payload[0].currency").value("EUR"))
-                .andExpect(jsonPath("$.payload[0].description").value("BA TERRIBILE LUCA        REC 94748B390EF241F7ABFADAF8588D9CEE TEST CUTOFF"));
-
-    }
-
-    @Test
-    public void testGetCashAccountTransactions_TransactionsException() throws Exception {
-        given(sandboxConfig.getAccountId()).willReturn(99999999L);
-
-        given(bankService.getCashAccountTransactions(ArgumentMatchers.any(Date.class), ArgumentMatchers.any(Date.class)))
-                .willThrow(new TransactionException("REQ004", "Invalid account identifier"));
-
-    }
-
-    @Test
-    public void testGetCashAccountTransactions_noValidData_TransactionsNotFoundException() throws Exception {
-
-        given(bankService.getCashAccountTransactions(ArgumentMatchers.any(Date.class), ArgumentMatchers.any(Date.class)))
-                .willThrow(new TransactionException("REQ017", "Invalid date format"));
-
-        // Perform the request with invalid date format
-        mockMvc.perform(MockMvcRequestBuilders.get("/bank/transaction")
-                        .param("fromAccountingDate", "invalid-date")
-                        .param("toAccountingDate", "invalid-date")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof TransactionException))
-                .andExpect(result -> assertEquals("Invalid date format", result.getResolvedException().getMessage()));
-
-    }
-
-    @Test
-    public void testMoneyTransfer_withError() throws Exception {
-
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        Date executionDate = sdf.parse("2019-04-01");
-
-        MoneyTransferRequest request = MoneyTransferRequest.builder()
-                .creditor(Creditor.builder()
-                        .name("John Doe")
-                        .account(CreditorAccount.builder()
-                                .accountCode("IT23A0336844430152923804660")
-                                .bicCode("SELBIT2BXXX")
-                                .build())
-                        .address(CreditorAddress.builder()
-                                .address(null)
-                                .city(null)
-                                .countryCode(null)
-                                .build())
+        balanceResponse = BalanceResponse.builder()
+                .status("OK")
+                .error(new ResponseError[0])
+                .payload(Balance.builder()
+                        .date(balanceDate)
+                        .balance(-28.09)
+                        .availableBalance(-28.09)
+                        .currency("EUR")
                         .build())
+                .build();
+
+        transactionResponse = TransactionResponse.builder()
+                .status("OK")
+                .error(new ResponseError[0])
+                .payload(TransactionResponse.Payload.builder().list(Collections.singletonList(
+                        Transaction.builder()
+                                .transactionId("286375735200")
+                                .operationId("23000004239582")
+                                .accountingDate(executionDate)
+                                .valueDate(executionDate)
+                                .type(TransactionType.builder().enumeration("GBS_TRANSACTION_TYPE")
+                                        .value("GBS_ACCOUNT_TRANSACTION_TYPE_0009")
+                                        .build())
+                                .amount(-0.10)
+                                .currency("EUR")
+                                .description("BA TERRIBILE LUCA        REC 94748B390EF241F7ABFADAF8588D9CEE TEST CUTOFF")
+                                .build()
+                )).build())
+                .build();
+
+        moneyTransferRequest = MoneyTransferRequest.builder()
+                .creditor(
+                        Creditor.builder()
+                                .name("John Doe")
+                                .account(CreditorAccount.builder()
+                                        .accountCode("IT23A0336844430152923804660")
+                                        .bicCode("SELBIT2BXXX").build())
+                                .address(CreditorAddress.builder()
+                                        .address(null)
+                                        .city(null)
+                                        .countryCode(null).build()).build()
+                )
                 .executionDate(executionDate)
                 .uri("REMITTANCE_INFORMATION")
                 .description("Payment invoice 75/2017")
@@ -182,26 +120,68 @@ public class BankControllerTest {
                                 .fiscalCode2(null)
                                 .fiscalCode3(null)
                                 .fiscalCode4(null)
-                                .fiscalCode5(null)
-                                .build())
+                                .fiscalCode5(null).build())
                         .legalPersonBeneficiary(LegalPersonBeneficiary.builder()
                                 .fiscalCode(null)
-                                .legalRepresentativeFiscalCode(null)
-                                .build())
-                        .build())
-                .build();
+                                .legalRepresentativeFiscalCode(null).build()).build()).build();
 
-        given(bankService.createMoneyTransfer(ArgumentMatchers.any(MoneyTransferRequest.class))).willThrow(new TransactionException("API000",
-                "it.sella.pagamenti.servizibonifico.exception.ServiziInvioBonificoSubsystemException: " +
-                        "it.sella.pagamenti.sottosistemi.SottosistemiException: Errore tecnico CONTO 45685475:Conto 45685475 non esiste"));
-
-        mockMvc.perform(post("/bank/money-transfer")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value("KO"))
-                .andExpect(jsonPath("$.errors[0].code").value("API000"))
-                .andExpect(jsonPath("$.errors[0].description").value("it.sella.pagamenti.servizibonifico.exception.ServiziInvioBonificoSubsystemException: it.sella.pagamenti.sottosistemi.SottosistemiException: Errore tecnico CONTO 45685475:Conto 45685475 non esiste"));
+        ResponseError[] responseErrors = {(ResponseError.builder().code("API000")
+                .description("it.sella.pagamenti.servizibonifico.exception.ServiziInvioBonificoSubsystemException: " +
+                        "it.sella.pagamenti.sottosistemi.SottosistemiException: Errore tecnico CONTO 45685475:Conto 45685475 non esiste")
+                .build())};
+        moneyTransferResponse = MoneyTransferResponse.builder()
+                .status("KO")
+                .error(responseErrors).build();
     }
 
+    @Test
+    public void testGetCashAccountBalance() throws Exception {
+        when(bankService.getCashAccountBalance(anyString())).thenReturn(balanceResponse);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/bank/balance/" + accountId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.payload.balance").value(-28.09))
+                .andExpect(jsonPath("$.payload.availableBalance").value(-28.09))
+                .andExpect(jsonPath("$.payload.currency").value("EUR"));
+    }
+
+    @Test
+    public void testGetCashAccountTransactions() throws Exception {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String fromDateString = dateFormat.format(dateFormat.parse("2023-01-01"));
+        String toDateString = dateFormat.format(dateFormat.parse("2023-01-15"));
+
+        when(bankService.getCashAccountTransactions(anyString(), any(Date.class), any(Date.class))).thenReturn(transactionResponse);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/bank/transaction/" + accountId)
+                        .param("fromAccountingDate", fromDateString)
+                        .param("toAccountingDate", toDateString)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.error").isEmpty())
+                .andExpect(jsonPath("$.payload.list[0].transactionId").value("286375735200"))
+                .andExpect(jsonPath("$.payload.list[0].operationId").value("23000004239582"))
+                .andExpect(jsonPath("$.payload.list[0].accountingDate").value("2019-03-30"))
+                .andExpect(jsonPath("$.payload.list[0].valueDate").value("2019-03-30"))
+                .andExpect(jsonPath("$.payload.list[0].type.enumeration").value("GBS_TRANSACTION_TYPE"))
+                .andExpect(jsonPath("$.payload.list[0].type.value").value("GBS_ACCOUNT_TRANSACTION_TYPE_0009"))
+                .andExpect(jsonPath("$.payload.list[0].amount").value(-0.10))
+                .andExpect(jsonPath("$.payload.list[0].currency").value("EUR"));
+    }
+
+    @Test
+    public void testCreateMoneyTransfer() throws Exception {
+        when(bankService.createMoneyTransfer(anyString(), any(MoneyTransferRequest.class))).thenReturn(moneyTransferResponse);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/bank/money-transfer/" + accountId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(moneyTransferRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("KO"))
+                .andExpect(jsonPath("$.error[0].code").value("API000"))
+                .andExpect(jsonPath("$.error[0].description").value("it.sella.pagamenti.servizibonifico.exception.ServiziInvioBonificoSubsystemException: "+
+                                                "it.sella.pagamenti.sottosistemi.SottosistemiException: Errore tecnico CONTO 45685475:Conto 45685475 non esiste"));
+    }
 }

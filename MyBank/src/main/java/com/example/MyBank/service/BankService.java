@@ -1,25 +1,21 @@
 package com.example.MyBank.service;
 
 import com.example.MyBank.configuration.SandboxConfig;
-import com.example.MyBank.exception.AccountBalanceNotFoundException;
-import com.example.MyBank.exception.MoneyTransferException;
-import com.example.MyBank.exception.TransactionException;
-import com.example.MyBank.mappers.TransactionMapper;
-import com.example.MyBank.model.ResponseError;
 import com.example.MyBank.model.balance.BalanceResponse;
 import com.example.MyBank.model.moneyTransfer.request.MoneyTransferRequest;
 import com.example.MyBank.model.moneyTransfer.response.MoneyTransferResponse;
-import com.example.MyBank.model.transaction.Transaction;
 import com.example.MyBank.model.transaction.TransactionResponse;
-import com.example.MyBank.repository.TransactionRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.text.SimpleDateFormat;
@@ -33,32 +29,37 @@ public class BankService {
     private SandboxConfig sandboxConfig;
     @Autowired
     private RestTemplate restTemplate;
+
     @Autowired
-    private TransactionRepository transactionRepository;
-    @Autowired
-    private TransactionMapper transactionMapper;
+    private ObjectMapper objectMapper;
+//    @Autowired
+//    private TransactionRepository transactionRepository;
+//    @Autowired
+//    private TransactionMapper transactionMapper;
 
-    public BalanceResponse getCashAccountBalance() throws AccountBalanceNotFoundException {
+    public BalanceResponse getCashAccountBalance(String accountId) throws JsonProcessingException {
+        BalanceResponse response;
+        try {
+            String url = sandboxConfig.getBaseUrl() + "/api/gbs/banking/v4.0/accounts/" + accountId + "/balance";
 
-            String url= sandboxConfig.getBaseUrl()+ "/api/gbs/banking/v4.0/accounts/" + sandboxConfig.getAccountId() + "/balance";
+            HttpHeaders httpHeaders = createHttpHeaders();
+            HttpEntity<String> entity = new HttpEntity<>(httpHeaders);
 
-            HttpHeaders httpHeaders= createHttpHeaders();
-            HttpEntity<String> entity= new HttpEntity<>(httpHeaders);
+            response = restTemplate.exchange(url, HttpMethod.GET, entity, BalanceResponse.class).getBody();
 
-            ResponseEntity<BalanceResponse> response= callApi(url, HttpMethod.GET, entity, BalanceResponse.class);
+            return response;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            response = objectMapper.readValue(e.getResponseBodyAsString(), BalanceResponse.class);
+            response.setPayload(null);
+            return response;
+        }
 
-            if(response.getStatusCode().is2xxSuccessful()){
-                return response.getBody();
-            }else {
-                ResponseError error = response.getBody().getError()[0];
-                throw new AccountBalanceNotFoundException(error.getCode(), error.getDescription());
-            }
     }
 
-
-    public TransactionResponse getCashAccountTransactions(Date fromAccountingDate, Date toAccountingDate) throws TransactionException {
-
-            String baseUrl = sandboxConfig.getBaseUrl() + "/api/gbs/banking/v4.0/accounts/" + sandboxConfig.getAccountId() + "/transactions";
+    public TransactionResponse getCashAccountTransactions(String accountId, Date fromAccountingDate, Date toAccountingDate) throws JsonProcessingException {
+        TransactionResponse response;
+        try {
+            String baseUrl = sandboxConfig.getBaseUrl() + "/api/gbs/banking/v4.0/accounts/" + accountId + "/transactions";
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
             String fromDateString = dateFormat.format(fromAccountingDate);
@@ -72,35 +73,31 @@ public class BankService {
             HttpHeaders httpHeaders = createHttpHeaders();
             HttpEntity<String> entity = new HttpEntity<>(httpHeaders);
 
-            ResponseEntity<TransactionResponse> response = callApi(url, HttpMethod.GET, entity, TransactionResponse.class);
+            response = restTemplate.exchange(url, HttpMethod.GET, entity, TransactionResponse.class).getBody();
 
-            if (response.getStatusCode().is2xxSuccessful()) {
-                for(Transaction transaction: response.getBody().getPayload()){
-                transactionRepository.save(transactionMapper.map(transaction));
-                }
-                return response.getBody();
-            } else {
-                ResponseError error = response.getBody().getError()[0];
-                throw new TransactionException(error.getCode(), error.getDescription());
-            }
+            return response;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            response = objectMapper.readValue(e.getResponseBodyAsString(), TransactionResponse.class);
+            return response;
+        }
     }
 
-    public MoneyTransferResponse createMoneyTransfer(MoneyTransferRequest moneyTransferRequest) throws MoneyTransferException {
-            String url= sandboxConfig.getBaseUrl()+ "/api/gbs/banking/v4.0/accounts/" + sandboxConfig.getAccountId() + "/payments/money-transfers";
+    public MoneyTransferResponse createMoneyTransfer(String accountId, MoneyTransferRequest moneyTransferRequest) throws JsonProcessingException {
+        MoneyTransferResponse response;
+        try {
+            String url = sandboxConfig.getBaseUrl() + "/api/gbs/banking/v4.0/accounts/" + accountId + "/payments/money-transfers";
 
-            HttpHeaders httpHeaders= createHttpHeaders();
+            HttpHeaders httpHeaders = createHttpHeaders();
             HttpEntity<MoneyTransferRequest> entity = new HttpEntity<>(moneyTransferRequest, httpHeaders);
 
-            ResponseEntity<MoneyTransferResponse> response= callApi(url, HttpMethod.POST, entity, MoneyTransferResponse.class);
+            response = restTemplate.exchange(url, HttpMethod.POST, entity, MoneyTransferResponse.class).getBody();
 
+            return response;
 
-
-            if(response.getStatusCode().is2xxSuccessful()){
-                return response.getBody();
-            }else {
-                ResponseError error = response.getBody().getError()[0];
-                throw new MoneyTransferException(error.getCode(), error.getDescription());
-            }
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            response = objectMapper.readValue(e.getResponseBodyAsString(), MoneyTransferResponse.class);
+            return response;
+        }
     }
 
     private HttpHeaders createHttpHeaders() {
@@ -111,18 +108,4 @@ public class BankService {
         return httpHeaders;
     }
 
-    private <T> ResponseEntity<T> callApi(String url, HttpMethod method, HttpEntity<?> entity, Class<T> responseType) {
-        try {
-            ResponseEntity<T> response = restTemplate.exchange(url, method, entity, responseType);
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new ResponseStatusException(response.getStatusCode(), "Failed to call API");
-            }
-            return response;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new ResponseStatusException(e.getStatusCode(), e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("Exception occurred: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error");
-        }
-    }
 }

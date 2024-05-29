@@ -18,7 +18,5 @@ public class SandboxConfig {
     @Value("${sandbox.api-key}")
     private String apiKey;
 
-    @Value("${sandbox.account-id}")
-    private Long accountId;
 
 }
