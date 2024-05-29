@@ -32,7 +32,6 @@ public class BankService {
     private SandboxConfig sandboxConfig;
     @Autowired
     private RestTemplate restTemplate;
-
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired

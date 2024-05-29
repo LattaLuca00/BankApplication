@@ -14,12 +14,7 @@ public class MyBankConfig {
 
     @Bean
     public RestTemplate restTemplate() {
-
-        Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("PITC-Zscaler-Global-ZEN.proxy.corporate.ge.com", 80));
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setProxy(proxy);
-
-        return new RestTemplate(requestFactory);
+        return new RestTemplate();
     }
 
 }

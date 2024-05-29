@@ -19,8 +19,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @SpringBootApplication
-@EntityScan("com.example.MyBank")
-@EnableJpaRepositories("com.example.MyBank")
 public class MyBankApplication {
 
     public static void main(String[] args) throws JsonProcessingException, ParseException {
