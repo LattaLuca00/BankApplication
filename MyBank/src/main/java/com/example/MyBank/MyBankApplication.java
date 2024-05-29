@@ -10,13 +10,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @SpringBootApplication
+@EntityScan("com.example.MyBank")
+@EnableJpaRepositories("com.example.MyBank")
 public class MyBankApplication {
 
     public static void main(String[] args) throws JsonProcessingException, ParseException {

@@ -1,10 +1,13 @@
 package com.example.MyBank.service;
 
 import com.example.MyBank.configuration.SandboxConfig;
+import com.example.MyBank.mappers.TransactionMapper;
 import com.example.MyBank.model.balance.BalanceResponse;
 import com.example.MyBank.model.moneyTransfer.request.MoneyTransferRequest;
 import com.example.MyBank.model.moneyTransfer.response.MoneyTransferResponse;
+import com.example.MyBank.model.transaction.Transaction;
 import com.example.MyBank.model.transaction.TransactionResponse;
+import com.example.MyBank.repository.TransactionRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -32,10 +35,10 @@ public class BankService {
 
     @Autowired
     private ObjectMapper objectMapper;
-//    @Autowired
-//    private TransactionRepository transactionRepository;
-//    @Autowired
-//    private TransactionMapper transactionMapper;
+    @Autowired
+    private TransactionRepository transactionRepository;
+    @Autowired
+    private TransactionMapper transactionMapper;
 
     public BalanceResponse getCashAccountBalance(String accountId) throws JsonProcessingException {
         BalanceResponse response;
@@ -75,6 +78,9 @@ public class BankService {
 
             response = restTemplate.exchange(url, HttpMethod.GET, entity, TransactionResponse.class).getBody();
 
+            for(Transaction transaction : response.getPayload().getList()) {
+                transactionRepository.save(transactionMapper.map(transaction));
+            }
             return response;
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             response = objectMapper.readValue(e.getResponseBodyAsString(), TransactionResponse.class);

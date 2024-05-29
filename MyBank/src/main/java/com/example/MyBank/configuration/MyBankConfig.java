@@ -1,5 +1,6 @@
 package com.example.MyBank.configuration;
 
+import com.example.MyBank.mappers.TransactionMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -20,4 +21,5 @@ public class MyBankConfig {
 
         return new RestTemplate(requestFactory);
     }
+
 }

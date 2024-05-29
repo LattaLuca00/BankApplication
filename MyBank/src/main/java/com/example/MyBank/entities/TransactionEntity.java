@@ -34,6 +34,10 @@ public class TransactionEntity {
     private Date valueDate;
 
     @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "enumeration", column = @Column(name = "type_enumeration")),
+            @AttributeOverride(name = "value", column = @Column(name = "type_value"))
+    })
     private TransactionType type;
 
     @Column(name = "amount")
